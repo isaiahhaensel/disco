@@ -35,6 +35,7 @@ import org.openlvc.disco.configuration.UdpConfiguration;
 import org.openlvc.disco.pdu.DisOutputStream;
 import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.field.PduType;
+import org.openlvc.disco.utils.DebugRadioMonitor;
 import org.openlvc.disco.utils.NetworkUtils;
 import org.openlvc.disco.utils.SocketOptions;
 import org.openlvc.disco.utils.StringUtils;
@@ -63,6 +64,8 @@ public class UdpConnection implements IConnection
 
 	// metrics
 	private Metrics metrics;
+	
+	private DebugRadioMonitor debugRadioMonitor;
 	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -176,11 +179,21 @@ public class UdpConnection implements IConnection
 		this.receiverThread.start();
 
 		logger.info( "UDP Provider open and processing" );
+
+		this.debugRadioMonitor = new DebugRadioMonitor( this.getClass().getSimpleName(),
+		                                                this.logger );
+		this.debugRadioMonitor.start();
 	}
 	
 	@Override
 	public void close() throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+		{
+			this.debugRadioMonitor.stop();
+			this.debugRadioMonitor = null;
+		}
+		
 		if( this.recvSocket == null || this.recvSocket.isClosed() )
 			return;
 		
@@ -238,6 +251,9 @@ public class UdpConnection implements IConnection
 
 	public void send( PDU pdu ) throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+			this.debugRadioMonitor.onPdu(pdu);
+		
 		// Create a DISOutputStream to write to
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		DisOutputStream dos = new DisOutputStream( baos );

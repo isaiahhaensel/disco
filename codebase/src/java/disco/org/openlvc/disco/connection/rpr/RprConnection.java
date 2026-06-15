@@ -48,6 +48,7 @@ import org.openlvc.disco.connection.rpr.model.ObjectModel;
 import org.openlvc.disco.connection.rpr.objects.ObjectInstance;
 import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.field.PduType;
+import org.openlvc.disco.utils.DebugRadioMonitor;
 import org.openlvc.disco.utils.FileUtils;
 import org.openlvc.disco.utils.ReflectionUtils;
 import org.openlvc.disco.utils.XmlUtils;
@@ -104,6 +105,8 @@ public class RprConnection implements IConnection
 	
 	// Metrics
 	private Metrics metrics;
+	
+	private DebugRadioMonitor debugRadioMonitor;
 
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -278,6 +281,10 @@ public class RprConnection implements IConnection
 		
 		// Step 4. Start Local Services
 		this.pduHeartbeater.start();
+		
+		this.debugRadioMonitor = new DebugRadioMonitor( this.getClass().getSimpleName(),
+		                                                this.logger );
+		this.debugRadioMonitor.start();
 	}
 
 	/**
@@ -286,6 +293,12 @@ public class RprConnection implements IConnection
 	@Override
 	public void close() throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+		{
+			this.debugRadioMonitor.stop();
+			this.debugRadioMonitor = null;
+		}
+		
 		// Stop local services
 		if( this.pduHeartbeater != null )
 			this.pduHeartbeater.stop();
@@ -311,6 +324,9 @@ public class RprConnection implements IConnection
 	@Override
 	public void send( PDU pdu ) throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+			this.debugRadioMonitor.onPdu(pdu);
+		
 		try
 		{
 			pduBus.publish( pdu );
