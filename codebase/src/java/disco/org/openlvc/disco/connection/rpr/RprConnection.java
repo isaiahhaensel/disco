@@ -64,7 +64,6 @@ import hla.rti1516e.ObjectInstanceHandle;
 import hla.rti1516e.ParameterHandleValueMap;
 import hla.rti1516e.RTIambassador;
 import hla.rti1516e.ResignAction;
-import hla.rti1516e.RtiFactoryFactory;
 import hla.rti1516e.exceptions.FederateAlreadyExecutionMember;
 import hla.rti1516e.exceptions.FederateNameAlreadyInUse;
 import hla.rti1516e.exceptions.FederationExecutionAlreadyExists;
@@ -380,7 +379,7 @@ public class RprConnection implements IConnection
 		try
 		{
 			logger.debug( "Connecting to RTI" );
-			this.rtiamb = RtiFactoryFactory.getRtiFactory().getRtiAmbassador();
+			this.rtiamb = RprRtiFactoryFactory.getRtiFactory().getRtiAmbassador();
 			this.fedamb = new FederateAmbassador( this );
 			this.rtiamb.connect( this.fedamb,
 			                     CallbackModel.HLA_IMMEDIATE,
@@ -500,6 +499,7 @@ public class RprConnection implements IConnection
 		try
 		{
 			// Resign from the federation
+			logger.info( "Resigning from HLA federation" );
 			this.rtiamb.resignFederationExecution( ResignAction.DELETE_OBJECTS_THEN_DIVEST );
 		}
 		catch( RTIexception rtie )
@@ -507,24 +507,31 @@ public class RprConnection implements IConnection
 			logger.warn( "Error while resigning from HLA federation: "+rtie.getMessage() );
 		}
 		
-		// Delete the federation, to be a good citizen. Will get told off if people are
-		// still using it, so expect that.
-		try
+		// Delete the federation, to be a good citizen (unless we're
+		// using the MAK RTI, which prefers to clean it up automatically
+		// after we disconnect).
+		// Will get told off if people are still using it, so expect that.
+		if( rprConfiguration.getRtiProvider() != RtiProvider.Mak )
 		{
-			this.rtiamb.destroyFederationExecution( rprConfiguration.getFederationName() );
-		}
-		catch( RTIexception rtie )
-		{
-			// no-op
-		}
-		catch( Exception e )
-		{
-			e.printStackTrace();
+			try
+			{
+				logger.info( "Destroying federation execution" );
+				this.rtiamb.destroyFederationExecution( rprConfiguration.getFederationName() );
+			}
+			catch( RTIexception rtie )
+			{
+				logger.catching( Level.WARN, rtie );
+			}
+			catch( Exception e )
+			{
+				logger.catching( e );
+			}
 		}
 
 		// Disconnect from the RTI and then we are allll cleaned up
 		try
 		{
+			logger.info( "Disconnecting from RTI" );
 			this.rtiamb.disconnect();
 			this.rtiambConnected = false;
 		}
@@ -532,6 +539,8 @@ public class RprConnection implements IConnection
 		{
 			throw new DiscoException( "Error disconnecting from RTI: "+rtie.getMessage(), rtie );
 		}
+		
+		logger.info( "Successfully disconnected from RTI" );
 	}
 
 	
