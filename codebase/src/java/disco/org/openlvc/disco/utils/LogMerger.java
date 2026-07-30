@@ -41,7 +41,7 @@ public class LogMerger
 	private final long mergeCalls;
 	
 	private boolean isFirst = false;
-	private long timeOfLastRun = Long.MIN_VALUE;
+	private long timeOfLastRun = 0;
 	private long callsSinceLastRun = 0;
 	
 	//----------------------------------------------------------

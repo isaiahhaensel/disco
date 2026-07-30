@@ -151,7 +151,7 @@ public class Disrespector
 			}
 			catch( UnsupportedException ue )
 			{
-				disToHlaMerger.getMergeCount().ifPresent( ( c) ->  disCenter.getLogger().warn( "(x{}) [UNSUPPORTED: {}]", c, ue.getMessage() ));
+				disToHlaMerger.getMergeCount().ifPresent( ( c) ->  disCenter.getLogger().warn("(x%s) [UNSUPPORTED: %s]", c, ue.getMessage() ));
 			}
 		}
 	}
@@ -167,7 +167,7 @@ public class Disrespector
 			}
 			catch( UnsupportedException ue )
 			{
-				hlaToDisMerger.getMergeCount().ifPresent( ( c) ->  hlaCenter.getLogger().warn( "(x{}) [UNSUPPORTED: {}]", c, ue.getMessage() ));
+				hlaToDisMerger.getMergeCount().ifPresent( ( c) ->  hlaCenter.getLogger().warn("(x%s) [UNSUPPORTED: %s]", c, ue.getMessage()) );
 			}
 		}
 	} 

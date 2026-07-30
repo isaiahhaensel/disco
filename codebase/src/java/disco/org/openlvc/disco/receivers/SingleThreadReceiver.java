@@ -196,7 +196,7 @@ public class SingleThreadReceiver extends PduReceiver
 				{
 					// log and continue
 					unsupportedPDUMerger.getMergeCount().ifPresent(
-						(c) -> opscenter.getLogger().warn( "(x{}) (PduRecv) Received unsupported PDU, skipping it: {}", c, up.getMessage() )
+						(c) -> opscenter.getLogger().warn( "(x%s) (PduRecv) Received unsupported PDU, skipping it: %s", c, up.getMessage() )
 					);
 				}
 				catch( DiscoException de )
@@ -204,7 +204,7 @@ public class SingleThreadReceiver extends PduReceiver
 					// log and continue
 					discoExceptionMerger.getMergeCount().ifPresent(
 						(c) -> {
-							opscenter.getLogger().warn( "(x{}) (PduRecv) Problem deserializing PDU, skipping it: {}", c, de.getMessage() );
+							opscenter.getLogger().warn( "(x%s) (PduRecv) Problem deserializing PDU, skipping it: %s", c, de.getMessage() );
 							opscenter.getLogger().catching( de );
 						}
 					);

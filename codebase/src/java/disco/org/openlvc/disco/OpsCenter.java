@@ -196,7 +196,7 @@ public class OpsCenter
 		if ( found.size() > 0 )
 		{
 			ClassLoaderUtils.extendClasspath( found );
-			logger.debug( "Extended classpath to include HLA libraries; added: "+found );
+			logger.info( "Extended classpath to include HLA libraries; added: "+found );
 			
 			// Mak is too cool for the classpath, it needs to be put on the library path
 			if( configuration.getRprConfiguration().getRtiProvider() == RtiProvider.Mak )

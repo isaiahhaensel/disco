@@ -49,6 +49,9 @@ public class SignalMapper extends AbstractMapper
 	
 	private final LogMerger sendMerger = new LogMerger( Duration.ofSeconds(1) );
 	private final LogMerger recvMerger = new LogMerger( Duration.ofSeconds(1) );
+	
+	private byte[] lastSentData;
+	private byte[] lastReceivedData;
 
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -104,8 +107,12 @@ public class SignalMapper extends AbstractMapper
 				break; // not supported
 		}
 		
-		if( pdu.getHeader().getTimestamp() == 0 )
-			sendMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x{}) [dis>>hla] sending SignalPDU with timestamp=0", c) );
+		if( Arrays.equals(pdu.getData(), this.lastSentData) )
+			sendMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x%s) [dis>>hla] sending SignalPDU with duplicate data bytes from radio %s-%s",
+			                                                                        c,
+			                                                                        pdu.getEntityId(),
+			                                                                        pdu.getRadioID()) );
+		this.lastSentData = pdu.getData();
 
 		// Send the interaction
 		super.sendInteraction( interaction, map );
@@ -150,11 +157,12 @@ public class SignalMapper extends AbstractMapper
 			PDU pdu = interaction.toPdu();
 			if( pdu instanceof SignalPdu signal )
 			{
-				if( signal.getHeader().getTimestamp() == 0 )
-					recvMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x{}) [hla>>dis] received SignalPDU with timestamp=0 from radio {}-{}", 
-					                                                                        signal.getEntityId(), 
-					                                                                        signal.getRadioID(),
-					                                                                        c) );
+				if( Arrays.equals(signal.getData(), this.lastReceivedData) )
+					recvMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x%s) [hla>>dis] received SignalPDU with duplicate data bytes from radio %s-%s",
+					                                                                        c,
+					                                                                        signal.getEntityId(),
+					                                                                        signal.getRadioID()) );
+				this.lastReceivedData = signal.getData();
 			}
 			
 			opscenter.getPduReceiver().receive( pdu.toByteArray() );

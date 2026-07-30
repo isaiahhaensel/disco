@@ -231,7 +231,7 @@ public abstract class AbstractMapper
 			                       parameters,
 			                       null );
 		}
-		catch( RTIexception rtie )
+		catch( RTIexception | NullPointerException rtie )
 		{
 			throw new DiscoException( rtie.getMessage(), rtie );
 		}
