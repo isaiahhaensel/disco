@@ -17,7 +17,7 @@
  */
 package org.openlvc.disco.receivers;
 
-import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -33,6 +33,7 @@ import org.openlvc.disco.pdu.DisInputStream;
 import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.UnsupportedPDU;
 import org.openlvc.disco.pdu.record.PduHeader;
+import org.openlvc.disco.utils.LogMerger;
 
 /**
  * Incoming packets are placed on a queue for later processing. The deserialization of these
@@ -67,6 +68,9 @@ public class ThreadPoolReceiver extends PduReceiver implements RejectedExecution
 //	private AtomicLong metricsTotalPdusFilteredSize;
 	private AtomicLong metricsTotalPdusDelivered;
 	private AtomicLong metricsTotalPdusDeliveredSize;
+	
+	LogMerger unsupportedPDUMerger = new LogMerger( Duration.ofSeconds(2) );
+	LogMerger discoExceptionMerger = new LogMerger( Duration.ofSeconds(2) );
 
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -166,7 +170,7 @@ public class ThreadPoolReceiver extends PduReceiver implements RejectedExecution
 			{
 				header.from( instream );
 			}
-			catch( IOException ioex )
+			catch( Throwable ioex )
 			{
 				logger.error( "Error reading PDU Header, discarding packet", ioex );
 				return;
@@ -186,16 +190,21 @@ public class ThreadPoolReceiver extends PduReceiver implements RejectedExecution
 			catch( UnsupportedPDU up )
 			{
 				// log and continue
-				if( logger.isTraceEnabled() )
-					logger.trace( "(PduRecv) Received unsupported PDU, skipping it: "+up.getMessage() );					
+				unsupportedPDUMerger.getMergeCount().ifPresent(
+					(c) -> opscenter.getLogger().warn( "(x{}) (PduRecv) Received unsupported PDU, skipping it: {}", c, up.getMessage() )
+				);
 			}
 			catch( DiscoException de )
 			{
 				// log and continue
-				if( logger.isDebugEnabled() )
-					logger.debug( "(PduRecv) Problem deserializing PDU, skipping it: "+de.getMessage(), de );
+				discoExceptionMerger.getMergeCount().ifPresent(
+					(c) -> {
+						opscenter.getLogger().warn( "(x{}) (PduRecv) Problem deserializing PDU, skipping it: {}", c, de.getMessage() );
+						opscenter.getLogger().catching( de );
+					}
+				);
 			}
-			catch( Exception e )
+			catch( Throwable e )
 			{
 				logger.warn( "(PduRecv) Unknown exception while processing PDU, skipping it: "+e.getMessage(), e );
 			}

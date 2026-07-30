@@ -35,6 +35,7 @@ import org.openlvc.disco.configuration.UdpConfiguration;
 import org.openlvc.disco.pdu.DisOutputStream;
 import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.field.PduType;
+import org.openlvc.disco.utils.DebugRadioMonitor;
 import org.openlvc.disco.utils.NetworkUtils;
 import org.openlvc.disco.utils.SocketOptions;
 import org.openlvc.disco.utils.StringUtils;
@@ -64,11 +65,15 @@ public class UdpConnection implements IConnection
 	// metrics
 	private Metrics metrics;
 	
+	private final boolean isSender;
+	private DebugRadioMonitor debugRadioMonitor;
+	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
 	//----------------------------------------------------------
-	public UdpConnection()
+	public UdpConnection( boolean isSender )
 	{
+		this.isSender = isSender;
 		this.logger = null;          // set in configure()
 		this.opscenter = null;       // set in configure()
 		this.configuration = null;   // set in configure()
@@ -176,11 +181,24 @@ public class UdpConnection implements IConnection
 		this.receiverThread.start();
 
 		logger.info( "UDP Provider open and processing" );
+
+		if( this.isSender )
+		{
+			this.debugRadioMonitor = new DebugRadioMonitor( this.getClass().getSimpleName(),
+			                                                this.logger );
+			this.debugRadioMonitor.start();
+		}
 	}
 	
 	@Override
 	public void close() throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+		{
+			this.debugRadioMonitor.stop();
+			this.debugRadioMonitor = null;
+		}
+		
 		if( this.recvSocket == null || this.recvSocket.isClosed() )
 			return;
 		
@@ -238,6 +256,9 @@ public class UdpConnection implements IConnection
 
 	public void send( PDU pdu ) throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+			this.debugRadioMonitor.onPdu(pdu);
+		
 		// Create a DISOutputStream to write to
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		DisOutputStream dos = new DisOutputStream( baos );
@@ -307,11 +328,12 @@ public class UdpConnection implements IConnection
 				catch( SocketException se )
 				{
 					// socket was closed on it - that's our cue to leave!
+					logger.info( "SocketException in UdpConnection Receiver: assuming shutdown" );
 					return;
 				}
-				catch( Exception e )
+				catch( Throwable e )
 				{
-					e.printStackTrace();
+					logger.error( "Error in UdpConnection Receiver: "+e.getMessage(), e );
 				}
 			}
 		}

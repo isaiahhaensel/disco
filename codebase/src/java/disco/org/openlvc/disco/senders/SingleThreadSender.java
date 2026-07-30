@@ -129,10 +129,10 @@ public class SingleThreadSender extends PduSender
 					// time to shut down
 					return;
 				}
-				catch( Exception ex )
+				catch( Throwable ex )
 				{
 					// warn about the error and move on to the next PDU
-					logger.warn( "Error trying to serialize PDU ("+pdu+"): "+ex.getMessage(), ex );
+					logger.warn( "(PduSend) Error trying to serialize PDU ("+pdu+"): "+ex.getMessage(), ex );
 				}
 			}
 		}

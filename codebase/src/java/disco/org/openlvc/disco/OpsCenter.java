@@ -52,11 +52,24 @@ public class OpsCenter
 	// Cached configuration settings for quick access
 	private short exerciseId;
 	
+	private final boolean isSender;
+	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
 	//----------------------------------------------------------
 	public OpsCenter()
 	{
+		this( false );
+	}
+	
+	public OpsCenter( DiscoConfiguration configuration )
+	{
+		this( false, configuration );
+	}
+	
+	public OpsCenter( boolean isSender )
+	{
+		this.isSender = isSender;
 		this.open = false;
 		this.configuration = new DiscoConfiguration();
 		this.logger = null;
@@ -69,9 +82,9 @@ public class OpsCenter
 		this.exerciseId = 1;
 	}
 
-	public OpsCenter( DiscoConfiguration configuration )
+	public OpsCenter( boolean isSender, DiscoConfiguration configuration )
 	{
-		this();
+		this( isSender );
 		this.configuration = configuration;
 	}
 
@@ -108,7 +121,7 @@ public class OpsCenter
 				applyRprClasspathHack();
 			
 			this.logger.info( "Creating connection: "+configuration.getConnection() );
-			this.connection = ConnectionFactory.getConnection( configuration.getConnection() );
+			this.connection = ConnectionFactory.getConnection( configuration.getConnection(), this.isSender );
 			this.connection.configure( this );
 
 			// tell people what PDUs this connection supports

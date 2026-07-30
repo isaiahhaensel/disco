@@ -17,6 +17,7 @@
  */
 package org.openlvc.disco.connection.rpr.mappers;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -26,8 +27,10 @@ import org.openlvc.disco.connection.rpr.interactions.EncodedAudioRadioSignal;
 import org.openlvc.disco.connection.rpr.interactions.InteractionInstance;
 import org.openlvc.disco.connection.rpr.model.InteractionClass;
 import org.openlvc.disco.connection.rpr.model.ParameterClass;
+import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.field.PduType;
 import org.openlvc.disco.pdu.radio.SignalPdu;
+import org.openlvc.disco.utils.LogMerger;
 
 import hla.rti1516e.ParameterHandleValueMap;
 
@@ -43,6 +46,9 @@ public class SignalMapper extends AbstractMapper
 	// Encoded Audio
 	private InteractionClass hlaClass;
 	private ParameterClass audioData;
+	
+	private final LogMerger sendMerger = new LogMerger( Duration.ofSeconds(1) );
+	private final LogMerger recvMerger = new LogMerger( Duration.ofSeconds(1) );
 
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -97,6 +103,9 @@ public class SignalMapper extends AbstractMapper
 			default:
 				break; // not supported
 		}
+		
+		if( pdu.getHeader().getTimestamp() == 0 )
+			sendMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x{}) [dis>>hla] sending SignalPDU with timestamp=0", c) );
 
 		// Send the interaction
 		super.sendInteraction( interaction, map );
@@ -137,7 +146,18 @@ public class SignalMapper extends AbstractMapper
 			// Send the PDU off to the OpsCenter
 			// FIXME - We serialize it to a byte[], but it will be turned back into a PDU
 			//         on the other side. This is inefficient and distasteful. Fix me.
-			opscenter.getPduReceiver().receive( interaction.toPdu().toByteArray() );
+			
+			PDU pdu = interaction.toPdu();
+			if( pdu instanceof SignalPdu signal )
+			{
+				if( signal.getHeader().getTimestamp() == 0 )
+					recvMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x{}) [hla>>dis] received SignalPDU with timestamp=0 from radio {}-{}", 
+					                                                                        signal.getEntityId(), 
+					                                                                        signal.getRadioID(),
+					                                                                        c) );
+			}
+			
+			opscenter.getPduReceiver().receive( pdu.toByteArray() );
 		}
 	}
 

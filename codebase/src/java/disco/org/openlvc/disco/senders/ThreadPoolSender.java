@@ -115,11 +115,11 @@ public class ThreadPoolSender extends PduSender implements RejectedExecutionHand
 		{
 			try
 			{
-				connection.send( pdu.toByteArray() );
+				connection.send( pdu );
 			}
-			catch( DiscoException ioex )
+			catch( Throwable ex )
 			{
-				logger.warn( "Error trying to serialize PDU ("+pdu+"): "+ioex.getMessage(), ioex );
+				logger.warn( "(PduSend) Error trying to serialize PDU ("+pdu+"): "+ex.getMessage(), ex );
 			}
 		}
 	}

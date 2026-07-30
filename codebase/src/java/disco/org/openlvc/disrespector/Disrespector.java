@@ -17,12 +17,16 @@
  */
 package org.openlvc.disrespector;
 
+import java.time.Duration;
+
 import org.openlvc.disco.DiscoException;
 import org.openlvc.disco.IPduListener;
 import org.openlvc.disco.OpsCenter;
 import org.openlvc.disco.UnsupportedException;
 import org.openlvc.disco.configuration.DiscoConfiguration;
 import org.openlvc.disco.pdu.PDU;
+import org.openlvc.disco.utils.DebugRadioMonitor;
+import org.openlvc.disco.utils.LogMerger;
 
 /**
  * Main container class for the Disrespector. Here we store two connections - one attached to a DIS
@@ -45,6 +49,10 @@ public class Disrespector
 	
 	// HLA Network
 	private OpsCenter hlaCenter;
+
+	private final LogMerger disToHlaMerger = new LogMerger( Duration.ofSeconds(2) );
+	private final LogMerger hlaToDisMerger = new LogMerger( Duration.ofSeconds(2) );
+	private DebugRadioMonitor debugRadioMonitor;
 
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -78,10 +86,20 @@ public class Disrespector
 		// Start the connections
 		this.hlaCenter.open();
 		this.disCenter.open();
+
+		this.debugRadioMonitor = new DebugRadioMonitor( this.getClass().getSimpleName(),
+		                                                disCenter.getLogger() );
+		this.debugRadioMonitor.start();
 	}
 	
 	public void stop()
 	{
+		if( this.debugRadioMonitor != null )
+		{
+			this.debugRadioMonitor.stop();
+			this.debugRadioMonitor = null;
+		}
+		
 		// Close the DIS side first
 		try
 		{
@@ -124,13 +142,16 @@ public class Disrespector
 		@Override
 		public void receive( PDU pdu )
 		{
+			if( debugRadioMonitor != null )
+				debugRadioMonitor.onPdu(pdu);
+			
 			try
 			{
 				hlaCenter.send( pdu );
 			}
 			catch( UnsupportedException ue )
 			{
-				disCenter.getLogger().debug( " [UNSUPPORTED: "+ue.getMessage()+"]" );
+				disToHlaMerger.getMergeCount().ifPresent( ( c) ->  disCenter.getLogger().warn( "(x{}) [UNSUPPORTED: {}]", c, ue.getMessage() ));
 			}
 		}
 	}
@@ -146,7 +167,7 @@ public class Disrespector
 			}
 			catch( UnsupportedException ue )
 			{
-				hlaCenter.getLogger().debug( " [UNSUPPORTED: "+ue.getMessage()+"]" );
+				hlaToDisMerger.getMergeCount().ifPresent( ( c) ->  hlaCenter.getLogger().warn( "(x{}) [UNSUPPORTED: {}]", c, ue.getMessage() ));
 			}
 		}
 	} 

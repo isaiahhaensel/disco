@@ -19,6 +19,7 @@ package org.openlvc.disco.connection.rpr;
 
 import java.io.File;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.openlvc.disco.DiscoException;
 import org.openlvc.disco.OpsCenter;
@@ -48,7 +50,9 @@ import org.openlvc.disco.connection.rpr.model.ObjectModel;
 import org.openlvc.disco.connection.rpr.objects.ObjectInstance;
 import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.field.PduType;
+import org.openlvc.disco.utils.DebugRadioMonitor;
 import org.openlvc.disco.utils.FileUtils;
+import org.openlvc.disco.utils.LogMerger;
 import org.openlvc.disco.utils.ReflectionUtils;
 import org.openlvc.disco.utils.XmlUtils;
 
@@ -104,6 +108,10 @@ public class RprConnection implements IConnection
 	
 	// Metrics
 	private Metrics metrics;
+	
+	private final LogMerger sendMerger = new LogMerger( Duration.ofSeconds(1) ); 
+	private final LogMerger recvMerger = new LogMerger( Duration.ofSeconds(1) ); 
+	private DebugRadioMonitor debugRadioMonitor;
 
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -278,6 +286,10 @@ public class RprConnection implements IConnection
 		
 		// Step 4. Start Local Services
 		this.pduHeartbeater.start();
+		
+		this.debugRadioMonitor = new DebugRadioMonitor( this.getClass().getSimpleName(),
+		                                                this.logger );
+		this.debugRadioMonitor.start();
 	}
 
 	/**
@@ -286,6 +298,12 @@ public class RprConnection implements IConnection
 	@Override
 	public void close() throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+		{
+			this.debugRadioMonitor.stop();
+			this.debugRadioMonitor = null;
+		}
+		
 		// Stop local services
 		if( this.pduHeartbeater != null )
 			this.pduHeartbeater.stop();
@@ -311,14 +329,21 @@ public class RprConnection implements IConnection
 	@Override
 	public void send( PDU pdu ) throws DiscoException
 	{
+		if( this.debugRadioMonitor != null )
+			this.debugRadioMonitor.onPdu(pdu);
+		
 		try
 		{
 			pduBus.publish( pdu );
 			metrics.pduSent( pdu.getPduLength() );
 		}
-		catch( Exception e )
+		catch( Throwable e )
 		{
-			logger.warn( "(RprConnection) Exception sending DIS >> HLA: "+e.getMessage(), e );
+			sendMerger.getMergeCount().ifPresent( (c) -> {
+				opscenter.getLogger().warn("(x{}) (RprConnection) Exception sending DIS >> HLA: {}", c, e.getMessage());
+				opscenter.getLogger().catching(Level.WARN, e);
+			} );
+			
 			metrics.pduDiscarded();
 		}
 	}
@@ -578,21 +603,31 @@ public class RprConnection implements IConnection
 	                                      ParameterHandleValueMap parameters )
 	{
 		logger.trace( "[hla>>dis] (Interaction) class=%s, parameters=%d", classHandle, parameters.size() );
-
-		// Find the class of interaction that this is
-		InteractionClass theClass = objectModel.getInteractionClass( classHandle );
-		if( theClass == null )
-		{
-			logger.warn( "[hla>>dis] (Interaction) Received for unknown class: "+classHandle );
-			return;
-		}
-
-		// Publish an interaction event to the bus
-		hlaBus.publish( new HlaInteraction(theClass,parameters) );
 		
-		// Track metrics
-		int size = parameters.values().stream().mapToInt(v -> v.length).sum();
-		metrics.pduReceived(size);
+		try
+		{
+			// Find the class of interaction that this is
+			InteractionClass theClass = objectModel.getInteractionClass( classHandle );
+			if( theClass == null )
+			{
+				logger.warn( "[hla>>dis] (Interaction) Received for unknown class: "+classHandle );
+				return;
+			}
+			
+			// Publish an interaction event to the bus
+			hlaBus.publish( new HlaInteraction(theClass,parameters) );
+			
+			// Track metrics
+			int size = parameters.values().stream().mapToInt(v -> v.length).sum();
+			metrics.pduReceived(size);
+		}
+		catch( Throwable e )
+		{
+			recvMerger.getMergeCount().ifPresent( (c) -> {
+				opscenter.getLogger().warn("(x{}) Error receiving interaction: {}", c, e.getMessage());
+				opscenter.getLogger().catching(Level.WARN, e);
+			} );
+		}
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////

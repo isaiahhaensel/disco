@@ -29,6 +29,7 @@ import org.openlvc.disco.configuration.DiscoConfiguration;
 import org.openlvc.disco.pdu.DisSizes;
 import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.record.EntityId;
+import org.openlvc.disco.utils.DebugRadioMonitor;
 
 /**
  * For applications that don't want to work directly with the complete stream of PDUs, or want
@@ -67,6 +68,7 @@ public class DisApplication
 	private Heartbeater heartbeater;
 	private DeleteReaper deleteReaper;
 	private AtomicInteger entityCounter;
+	private DebugRadioMonitor debugRadioMonitor;
 	
 
 	//----------------------------------------------------------
@@ -110,7 +112,7 @@ public class DisApplication
 		this.pduStore.clear();
 		
 		// create the pieces that we need
-		this.opscenter = new OpsCenter( this.configuration );
+		this.opscenter = new OpsCenter( true, this.configuration );
 		this.opscenter.setPduListener( new PduListener() );
 		
 		// open the connection up
@@ -120,10 +122,20 @@ public class DisApplication
 		this.heartbeater.start();
 		this.deleteReaper.start();
 		this.entityCounter.set(0);
+
+		this.debugRadioMonitor = new DebugRadioMonitor( this.getClass().getSimpleName(),
+		                                                this.logger );
+		this.debugRadioMonitor.start();
 	}
 	
 	public void stop()
 	{
+		if( this.debugRadioMonitor != null )
+		{
+			this.debugRadioMonitor.stop();
+			this.debugRadioMonitor = null;
+		}
+		
 		// close off the recurring tasks
 		this.heartbeater.stop();
 		this.deleteReaper.stop();
@@ -142,6 +154,9 @@ public class DisApplication
 	 */
 	public void send( PDU pdu )
 	{
+		if( this.debugRadioMonitor != null )
+			this.debugRadioMonitor.onPdu(pdu);
+		
 		opscenter.send( pdu );
 	}
 	

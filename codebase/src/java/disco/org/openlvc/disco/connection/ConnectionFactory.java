@@ -47,11 +47,11 @@ public class ConnectionFactory
 	 *   - udp
 	 *   - tba (when I get around do making more)
 	 */
-	public static IConnection getConnection( String name ) throws IllegalArgumentException
+	public static IConnection getConnection( String name, boolean isSender ) throws IllegalArgumentException
 	{
 		name = name.trim();
 		if( name.equalsIgnoreCase("udp") )
-			return new UdpConnection();
+			return new UdpConnection(isSender);
 		else if( name.equals("rpr") )
 			return new RprConnection();
 		else

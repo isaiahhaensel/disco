@@ -18,6 +18,7 @@
 package org.openlvc.disco.receivers;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -25,6 +26,7 @@ import org.openlvc.disco.DiscoException;
 import org.openlvc.disco.OpsCenter;
 import org.openlvc.disco.PduReceiver;
 import org.openlvc.disco.pdu.UnsupportedPDU;
+import org.openlvc.disco.utils.LogMerger;
 
 /**
  * Places all incoming packets on a queue and processes them in a single, separate thread.
@@ -46,6 +48,9 @@ public class SingleThreadReceiver extends PduReceiver
 	private long totalProcessNanos;
 	private long avgProcessNanos;
 	private long packetsProcessed;
+	
+	LogMerger unsupportedPDUMerger = new LogMerger( Duration.ofSeconds(2) );
+	LogMerger discoExceptionMerger = new LogMerger( Duration.ofSeconds(2) );
 	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -190,16 +195,21 @@ public class SingleThreadReceiver extends PduReceiver
 				catch( UnsupportedPDU up )
 				{
 					// log and continue
-					if( logger.isTraceEnabled() )
-						logger.trace( "(PduRecv) Received unsupported PDU, skipping it: "+up.getMessage() );					
+					unsupportedPDUMerger.getMergeCount().ifPresent(
+						(c) -> opscenter.getLogger().warn( "(x{}) (PduRecv) Received unsupported PDU, skipping it: {}", c, up.getMessage() )
+					);
 				}
 				catch( DiscoException de )
 				{
 					// log and continue
-					if( logger.isDebugEnabled() )
-						logger.debug( "(PduRecv) Problem deserializing PDU, skipping it: "+de.getMessage(), de );
+					discoExceptionMerger.getMergeCount().ifPresent(
+						(c) -> {
+							opscenter.getLogger().warn( "(x{}) (PduRecv) Problem deserializing PDU, skipping it: {}", c, de.getMessage() );
+							opscenter.getLogger().catching( de );
+						}
+					);
 				}
-				catch( Exception e )
+				catch( Throwable e )
 				{
 					logger.warn( "(PduRecv) Unknown exception while processing PDU, skipping it: "+e.getMessage(), e );
 				}

@@ -52,11 +52,11 @@ public class SimpleSender extends PduSender
 	{
 		try
 		{
-			super.connection.send( pdu.toByteArray() );
+			super.connection.send( pdu );
 		}
-		catch( DiscoException ioex )
+		catch( Throwable ex )
 		{
-			logger.warn( "(PduSend) Problem serializing PDU for sending: "+ioex.getMessage(), ioex );
+			logger.warn( "(PduSend) Error trying to serialize PDU ("+pdu+"): "+ex.getMessage(), ex );
 		}
 	}
 
