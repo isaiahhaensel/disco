@@ -17,6 +17,8 @@
  */
 package org.openlvc.disco.application;
 
+import java.time.Duration;
+import java.util.Calendar;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.Logger;
@@ -28,7 +30,9 @@ import org.openlvc.disco.bus.MessageBus;
 import org.openlvc.disco.configuration.DiscoConfiguration;
 import org.openlvc.disco.pdu.DisSizes;
 import org.openlvc.disco.pdu.PDU;
+import org.openlvc.disco.pdu.radio.SignalPdu;
 import org.openlvc.disco.pdu.record.EntityId;
+import org.openlvc.disco.utils.LogMerger;
 
 /**
  * For applications that don't want to work directly with the complete stream of PDUs, or want
@@ -68,30 +72,44 @@ public class DisApplication
 	private DeleteReaper deleteReaper;
 	private AtomicInteger entityCounter;
 	
-
+	private boolean logSend;
+	private boolean logRecv;
+	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
 	//----------------------------------------------------------
 	public DisApplication()
 	{
-		this.configuration = new DiscoConfiguration();
+		this( new DiscoConfiguration() );
+	}
+	
+	public DisApplication( DiscoConfiguration configuration )
+	{
+		this( configuration, false, false );
+	}
+	
+	public DisApplication( boolean logSend, boolean logRecv )
+	{
+		this( new DiscoConfiguration(), logSend, logRecv );
+	}
+
+	public DisApplication( DiscoConfiguration configuration, boolean logSend, boolean logRecv )
+	{
+		this.configuration = configuration;
+		this.logSend = logSend;
+		this.logRecv = logRecv;
+		
 		this.opscenter = null; // set in start()
 		
 		// State Management Services and Helpers
 		this.heartbeater = new Heartbeater( this );
 		this.deleteReaper = new DeleteReaper( this );
 		this.entityCounter = new AtomicInteger(0);
-
+		
 		// PDU Storage and Management
 		this.pduStore = new PduStore( this );
 		this.pduBus = new MessageBus<>();
 		this.pduBus.subscribe( new ApplicationBusErrorReporter() );
-	}
-
-	public DisApplication( DiscoConfiguration configuration )
-	{
-		this();
-		this.configuration = configuration;
 	}
 
 	//----------------------------------------------------------
@@ -110,8 +128,8 @@ public class DisApplication
 		this.pduStore.clear();
 		
 		// create the pieces that we need
-		this.opscenter = new OpsCenter( this.configuration );
-		this.opscenter.setPduListener( new PduListener() );
+		this.opscenter = new OpsCenter( this.configuration, this.logSend );
+		this.opscenter.setPduListener( new PduListener( this.logRecv ) );
 		
 		// open the connection up
 		this.opscenter.open();
@@ -265,9 +283,48 @@ public class DisApplication
 	////////////////////////////////////////////////////////////////////////////////////////////
 	private class PduListener implements IPduListener
 	{
+		private boolean logRecv;
+		private final LogMerger recvMerger = new LogMerger( Duration.ofSeconds(1) );
+		long averageRecvDelay = 0L;
+		
+		public PduListener( boolean logRecv )
+		{
+			this.logRecv = logRecv;
+		}
+		
 		@Override
 		public void receive( PDU pdu )
 		{
+			if( logRecv && pdu instanceof SignalPdu )
+			{
+				long timestamp = pdu.getHeader().getTimestamp();
+				if (timestamp == 0)
+					recvMerger.getMergeCount().ifPresent( (c) -> {
+						logger.info("[udp] Received %s SignalPDUs with ts=0", c);
+					} );
+				else
+				{
+					// get the current base time
+					long currentTime = System.currentTimeMillis();
+					Calendar baseCalendar = Calendar.getInstance();
+					baseCalendar.set( Calendar.MINUTE, 0 );
+					baseCalendar.set( Calendar.SECOND, 0 );
+					baseCalendar.set( Calendar.MILLISECOND, 0 );
+					long lastHour = baseCalendar.getTimeInMillis();
+					
+					long actualMsPastTheHour = ((currentTime - lastHour) << 10) >> 10;
+					long signalMsPastTheHour = timestamp >> 10;
+					
+					long delay = actualMsPastTheHour - signalMsPastTheHour;
+					averageRecvDelay = (averageRecvDelay + delay) / 2;
+					
+					recvMerger.getMergeCount().ifPresent( (c) -> {
+						logger.info("[udp] Received %s SignalPDUs with average delay %sms", c, averageRecvDelay);
+						averageRecvDelay = delay;
+					} );
+				}
+			}
+			
 			// Step 1: Pass the update to the store
 			pduStore.pduReceived( pdu );
 			

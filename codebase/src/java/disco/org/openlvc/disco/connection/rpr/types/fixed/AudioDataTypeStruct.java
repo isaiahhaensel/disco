@@ -38,6 +38,7 @@ public class AudioDataTypeStruct extends WrappedHlaFixedRecord
 	private RPRunsignedInteger32BE sampleRate;
 	private RPRunsignedInteger16BE dataLength;
 	private RPRunsignedInteger32BE sampleCount;
+	private RPRunsignedInteger32BE timestamp;
 	private SignalDataLengthlessArray1Plus data;
 	
 	//----------------------------------------------------------
@@ -50,6 +51,7 @@ public class AudioDataTypeStruct extends WrappedHlaFixedRecord
 		this.sampleRate = new RPRunsignedInteger32BE();
 		this.dataLength = new RPRunsignedInteger16BE();
 		this.sampleCount = new RPRunsignedInteger32BE();
+		this.timestamp = new RPRunsignedInteger32BE();
 		this.data = new SignalDataLengthlessArray1Plus();
 		
 		// Add to the elements to the parent so that it can do its generic fixed-record stuff
@@ -58,6 +60,7 @@ public class AudioDataTypeStruct extends WrappedHlaFixedRecord
 		super.add( this.sampleRate );
 		super.add( this.dataLength );
 		super.add( this.sampleCount );
+		super.add( this.timestamp );
 		super.add( this.data );
 	}
 
@@ -120,6 +123,16 @@ public class AudioDataTypeStruct extends WrappedHlaFixedRecord
 	public void setSampleCount( long sampleCount )
 	{
 		this.sampleCount.setValue( sampleCount );
+	}
+	
+	public long getTimestamp()
+	{
+		return timestamp.getValue();
+	}
+	
+	public void setTimestamp( long timestamp )
+	{
+		this.timestamp.setValue( timestamp );
 	}
 
 	public byte[] getData()

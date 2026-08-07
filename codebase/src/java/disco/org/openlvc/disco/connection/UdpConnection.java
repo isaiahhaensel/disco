@@ -26,6 +26,8 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.time.Duration;
+import java.util.Calendar;
 import java.util.Collection;
 
 import org.apache.logging.log4j.Logger;
@@ -35,6 +37,8 @@ import org.openlvc.disco.configuration.UdpConfiguration;
 import org.openlvc.disco.pdu.DisOutputStream;
 import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.field.PduType;
+import org.openlvc.disco.pdu.radio.SignalPdu;
+import org.openlvc.disco.utils.LogMerger;
 import org.openlvc.disco.utils.NetworkUtils;
 import org.openlvc.disco.utils.SocketOptions;
 import org.openlvc.disco.utils.StringUtils;
@@ -64,10 +68,19 @@ public class UdpConnection implements IConnection
 	// metrics
 	private Metrics metrics;
 	
+	private boolean logSend;
+	private final LogMerger sendMerger = new LogMerger( Duration.ofSeconds( 1) );
+	private long averageSendDelay = 0L;
+	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
 	//----------------------------------------------------------
 	public UdpConnection()
+	{
+		this( false );
+	}
+	
+	public UdpConnection( boolean logSend )
 	{
 		this.logger = null;          // set in configure()
 		this.opscenter = null;       // set in configure()
@@ -79,8 +92,9 @@ public class UdpConnection implements IConnection
 		this.targetAddress = null;   // set in open()
 		this.exerciseId = -1;        // set in configure()
 		this.metrics = null;         // set in open()
+		
+		this.logSend = logSend;
 	}
-	
 	
 	//----------------------------------------------------------
 	//                    INSTANCE METHODS
@@ -249,6 +263,36 @@ public class UdpConnection implements IConnection
 			
 			// Write the body content
 			pdu.to( dos );
+			
+			if( logSend && pdu instanceof SignalPdu )
+			{
+				long timestamp = pdu.getHeader().getTimestamp();
+				if (timestamp == 0)
+					sendMerger.getMergeCount().ifPresent( (c) -> {
+						logger.info("[udp] Sent %s SignalPDUs with ts=0", c);
+					} );
+				else
+				{
+					// get the current base time
+					long currentTime = System.currentTimeMillis();
+					Calendar baseCalendar = Calendar.getInstance();
+					baseCalendar.set( Calendar.MINUTE, 0 );
+					baseCalendar.set( Calendar.SECOND, 0 );
+					baseCalendar.set( Calendar.MILLISECOND, 0 );
+					long lastHour = baseCalendar.getTimeInMillis();
+					
+					long actualMsPastTheHour = ((currentTime - lastHour) << 10) >> 10;
+					long signalMsPastTheHour = timestamp >> 10;
+					
+					long delay = actualMsPastTheHour - signalMsPastTheHour;
+					averageSendDelay = (averageSendDelay + delay) / 2;
+					
+					sendMerger.getMergeCount().ifPresent( (c) -> {
+						logger.info("[udp] Sent %s SignalPDUs with average delay %sms", c, averageSendDelay);
+						averageSendDelay = delay;
+					} );
+				}
+			}
 			
 			// Send the payload
 			send( baos.toByteArray() );

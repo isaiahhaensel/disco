@@ -57,4 +57,16 @@ public class ConnectionFactory
 		else
 			throw new IllegalArgumentException( "Connection type not known: "+name );
 	}
+	
+	public static IConnection getConnection( String name, boolean logSend )
+		throws IllegalArgumentException
+	{
+		name = name.trim();
+		if( name.equalsIgnoreCase("udp") )
+			return new UdpConnection( logSend );
+		else if( name.equals("rpr") )
+			return new RprConnection();
+		else
+			throw new IllegalArgumentException( "Connection type not known: "+name );
+	}
 }

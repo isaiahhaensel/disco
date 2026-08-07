@@ -22,8 +22,8 @@ import java.io.IOException;
 import org.openlvc.disco.pdu.DisInputStream;
 import org.openlvc.disco.pdu.DisOutputStream;
 import org.openlvc.disco.pdu.field.PduType;
-import org.openlvc.disco.pdu.field.ProtocolVersion;
 import org.openlvc.disco.pdu.field.ProtocolFamily;
+import org.openlvc.disco.pdu.field.ProtocolVersion;
 
 public class PduHeader
 {
@@ -149,6 +149,9 @@ public class PduHeader
 			this.paddingBytes = PADDING_CUSTOM;
 	}
 	
+	/**
+	 * For PDUs mapped from HLA objects/interactions, this will be {@code 0}.
+	 */
 	public long getTimestamp() { return this.timestamp; }
 	public void setTimestamp( long timestamp ) { this.timestamp = timestamp; }
 	

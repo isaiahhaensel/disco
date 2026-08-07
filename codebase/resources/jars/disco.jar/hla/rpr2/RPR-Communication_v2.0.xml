@@ -539,6 +539,11 @@ Orlando, FL 32878-1238, USA
                     <semantics>The number of samples in this transmission.</semantics>
                 </field>
                 <field>
+                    <name>Timestamp</name>
+                    <dataType>UnsignedInteger32</dataType>
+                    <semantics>The DIS timestamp of this transmission.</semantics>
+                </field>
+                <field>
                     <name>Data</name>
                     <dataType>SignalDataLengthlessArray1Plus</dataType>
                     <semantics>The signal data.</semantics>

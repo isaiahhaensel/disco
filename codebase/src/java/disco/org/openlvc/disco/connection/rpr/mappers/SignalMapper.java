@@ -17,7 +17,9 @@
  */
 package org.openlvc.disco.connection.rpr.mappers;
 
+import java.time.Duration;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 
 import org.openlvc.disco.DiscoException;
@@ -26,8 +28,10 @@ import org.openlvc.disco.connection.rpr.interactions.EncodedAudioRadioSignal;
 import org.openlvc.disco.connection.rpr.interactions.InteractionInstance;
 import org.openlvc.disco.connection.rpr.model.InteractionClass;
 import org.openlvc.disco.connection.rpr.model.ParameterClass;
+import org.openlvc.disco.pdu.PDU;
 import org.openlvc.disco.pdu.field.PduType;
 import org.openlvc.disco.pdu.radio.SignalPdu;
+import org.openlvc.disco.utils.LogMerger;
 
 import hla.rti1516e.ParameterHandleValueMap;
 
@@ -43,7 +47,12 @@ public class SignalMapper extends AbstractMapper
 	// Encoded Audio
 	private InteractionClass hlaClass;
 	private ParameterClass audioData;
-
+	
+	private final LogMerger sendMerger = new LogMerger( Duration.ofSeconds(1) );
+	private final LogMerger recvMerger = new LogMerger( Duration.ofSeconds(1) );
+	long averageSendDelay = 0L;
+	long averageRecvDelay = 0L;
+	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
 	//----------------------------------------------------------
@@ -97,6 +106,33 @@ public class SignalMapper extends AbstractMapper
 			default:
 				break; // not supported
 		}
+		
+		long timestamp = pdu.getHeader().getTimestamp();
+		if (timestamp == 0)
+			sendMerger.getMergeCount().ifPresent( (c) -> {
+				System.out.printf("[dis>>hla] Sent %s SignalPDUs with ts=0%n", c);
+			} );
+		else
+		{
+			// get the current base time
+			long currentTime = System.currentTimeMillis();
+			Calendar baseCalendar = Calendar.getInstance();
+			baseCalendar.set( Calendar.MINUTE, 0 );
+			baseCalendar.set( Calendar.SECOND, 0 );
+			baseCalendar.set( Calendar.MILLISECOND, 0 );
+			long lastHour = baseCalendar.getTimeInMillis();
+			
+			long actualMsPastTheHour = ((currentTime - lastHour) << 10) >> 10;
+			long signalMsPastTheHour = timestamp >> 10;
+			
+			long delay = actualMsPastTheHour - signalMsPastTheHour;
+			averageSendDelay = (averageSendDelay + delay) / 2;
+			
+			sendMerger.getMergeCount().ifPresent( (c) -> {
+				System.out.printf("[dis>>hla] Sent %s SignalPDUs with average delay %sms%n", c, averageSendDelay);
+				averageSendDelay = delay;
+			} );
+		}
 
 		// Send the interaction
 		super.sendInteraction( interaction, map );
@@ -137,7 +173,37 @@ public class SignalMapper extends AbstractMapper
 			// Send the PDU off to the OpsCenter
 			// FIXME - We serialize it to a byte[], but it will be turned back into a PDU
 			//         on the other side. This is inefficient and distasteful. Fix me.
-			opscenter.getPduReceiver().receive( interaction.toPdu().toByteArray() );
+			
+			PDU pdu = interaction.toPdu();
+			
+			long timestamp = pdu.getHeader().getTimestamp();
+			if (timestamp == 0)
+				recvMerger.getMergeCount().ifPresent( (c) -> {
+					System.out.printf("(x%s) [hla<<dis] received SignalPDU with ts=0%n", c);
+				} );
+			else
+			{
+				// get the current base time
+				long currentTime = System.currentTimeMillis();
+				Calendar baseCalendar = Calendar.getInstance();
+				baseCalendar.set( Calendar.MINUTE, 0 );
+				baseCalendar.set( Calendar.SECOND, 0 );
+				baseCalendar.set( Calendar.MILLISECOND, 0 );
+				long lastHour = baseCalendar.getTimeInMillis();
+				
+				long actualMsPastTheHour = ((currentTime - lastHour) << 10) >> 10;
+				long signalMsPastTheHour = timestamp >> 10;
+				
+				long delay = actualMsPastTheHour - signalMsPastTheHour;
+				averageRecvDelay = (averageRecvDelay + delay) / 2;
+				
+				recvMerger.getMergeCount().ifPresent( (c) -> {
+					System.out.printf("(x%s) [hla<<dis] receiving with average delay %sms%n", c, averageRecvDelay);
+					averageRecvDelay = delay;
+				} );
+			}
+			
+			opscenter.getPduReceiver().receive( pdu.toByteArray() );
 		}
 	}
 
