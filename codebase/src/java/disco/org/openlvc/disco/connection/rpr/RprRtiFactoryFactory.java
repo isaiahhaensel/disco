@@ -26,18 +26,18 @@ import hla.rti1516e.RtiFactory;
 import hla.rti1516e.exceptions.RTIinternalError;
 
 /**
- * A custom implementation of {@link hla.rti1516e.RtiFactoryFactory} that ensures that the same
- * classloader is used for all attempts to {@link hla.rti1516e.RtiFactory}.
+ * A custom implementation of {@link hla.rti1516e.RtiFactoryFactory} that enforces usage of a
+ * specific classloader, provided by {@link RprRtiPathHelper}.
  * <p>
- * <b>Note:</b> the first invocation of a method from this class MUST occur on the same thread
- * as the prior invocation of {@link org.openlvc.disco.utils.ClassLoaderUtils#extendClasspath}.
+ * <b>Note:</b> {@link RprRtiPathHelper#extendClassPath} MUST be used to create an extended
+ * classloader before the first invocation of a method from this class. Else, the system class
+ * loader will be used.
  */
 public class RprRtiFactoryFactory
 {
     //----------------------------------------------------------
     //                    STATIC VARIABLES
     //----------------------------------------------------------
-    private static ClassLoader classLoader;
 
     //----------------------------------------------------------
     //                   INSTANCE VARIABLES
@@ -46,7 +46,7 @@ public class RprRtiFactoryFactory
     //----------------------------------------------------------
     //                      CONSTRUCTORS
     //----------------------------------------------------------
-    public RprRtiFactoryFactory() {}
+    private RprRtiFactoryFactory() {}
     
     //----------------------------------------------------------
     //                    INSTANCE METHODS
@@ -62,7 +62,8 @@ public class RprRtiFactoryFactory
     
 	public static RtiFactory getRtiFactory( String name ) throws RTIinternalError
 	{
-		for( RtiFactory rtiFactory : ServiceLoader.load(RtiFactory.class, getClassLoader()) )
+		for( RtiFactory rtiFactory : ServiceLoader.load(RtiFactory.class,
+		                                                RprRtiPathHelper.getActiveLoader()) )
 		{
 			if( rtiFactory.rtiName().equals(name) )
 			{
@@ -75,7 +76,8 @@ public class RprRtiFactoryFactory
 	
 	public static RtiFactory getRtiFactory() throws RTIinternalError
 	{
-		ServiceLoader<RtiFactory> loader = ServiceLoader.load( RtiFactory.class, getClassLoader() );
+		ServiceLoader<RtiFactory> loader = ServiceLoader.load( RtiFactory.class,
+		                                                       RprRtiPathHelper.getActiveLoader() );
 		Iterator<RtiFactory> iterator = loader.iterator();
 		if( iterator.hasNext() )
 		{
@@ -91,27 +93,12 @@ public class RprRtiFactoryFactory
 	{
 		Set<RtiFactory> factories = new HashSet<>();
 		
-		for( RtiFactory rtiFactory : ServiceLoader.load(RtiFactory.class, getClassLoader()) )
+		for( RtiFactory rtiFactory : ServiceLoader.load(RtiFactory.class,
+		                                                RprRtiPathHelper.getActiveLoader()) )
 		{
 			factories.add( rtiFactory );
 		}
 		
 		return factories;
-	}
-
-	/**
-	 * @return the current thread's classloader if possible, or {@code null} if the system
-	 *         classloader is to be used.
-	 */
-	private static ClassLoader getClassLoader()
-	{
-		if( classLoader == null )
-		{
-			// prefer thread context classloader, since that'll usually
-			// be the one with the extended classpath
-			classLoader = Thread.currentThread().getContextClassLoader();
-		}
-		
-		return classLoader;
 	}
 }
