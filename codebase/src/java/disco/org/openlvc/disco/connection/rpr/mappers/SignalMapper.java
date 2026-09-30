@@ -108,10 +108,11 @@ public class SignalMapper extends AbstractMapper
 		}
 		
 		if( Arrays.equals(pdu.getData(), this.lastSentData) )
-			sendMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x%s) [dis>>hla] sending SignalPDU with duplicate data bytes from radio %s-%s",
-			                                                                        c,
-			                                                                        pdu.getEntityId(),
-			                                                                        pdu.getRadioID()) );
+			sendMerger.getMergeCount().ifPresent( (c) -> logger.warn("(x%s) [dis>>hla] sending SignalPDU with duplicate data bytes of size %d from radio %s-%s",
+			                                                         c,
+			                                                         pdu.getData().length,
+			                                                         pdu.getEntityId(),
+			                                                         pdu.getRadioID()) );
 		this.lastSentData = pdu.getData();
 
 		// Send the interaction
@@ -158,10 +159,11 @@ public class SignalMapper extends AbstractMapper
 			if( pdu instanceof SignalPdu signal )
 			{
 				if( Arrays.equals(signal.getData(), this.lastReceivedData) )
-					recvMerger.getMergeCount().ifPresent( (c) -> opscenter.getLogger().warn("(x%s) [hla>>dis] received SignalPDU with duplicate data bytes from radio %s-%s",
-					                                                                        c,
-					                                                                        signal.getEntityId(),
-					                                                                        signal.getRadioID()) );
+					recvMerger.getMergeCount().ifPresent( (c) -> logger.warn("(x%s) [hla>>dis] received SignalPDU with duplicate data bytes of size %d from radio %s-%s",
+					                                                         c,
+																			 signal.getData().length,
+					                                                         signal.getEntityId(),
+					                                                         signal.getRadioID()) );
 				this.lastReceivedData = signal.getData();
 			}
 			
