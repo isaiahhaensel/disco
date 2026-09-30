@@ -42,6 +42,7 @@ public class DebugRadioMonitor
 	//                    STATIC VARIABLES
 	//----------------------------------------------------------
 	public static final Duration MONITOR_TIMER_PERIOD = Duration.ofSeconds( 1 );
+	public static final Duration COUNT_LOG_TIMER_PERIOD = Duration.ofSeconds( 5 );
 	public static final Duration MAX_SIGNAL_GAP = Duration.ofSeconds( 1 );
 	public static final Duration HEARTBEAT_PERIOD = Duration.ofSeconds( 1 );
 	public static final Duration MAX_HEARTBEAT_DELAY = Duration.ofSeconds( 2 );
@@ -55,6 +56,7 @@ public class DebugRadioMonitor
 	private final long maxTxUpdateIntervalMs;
 	private final long maxSignalIntervalMs;
 	private Timer monitorTimer;
+	private Timer logTimer;
 	
 	//----------------------------------------------------------
 	//                      CONSTRUCTORS
@@ -74,7 +76,7 @@ public class DebugRadioMonitor
 	//----------------------------------------------------------
 	public void start()
 	{
-		this.monitorTimer = new Timer( this.getClass().getSimpleName()+" "+name );
+		this.monitorTimer = new Timer( this.name+"-debug-monitor" );
 		this.monitorTimer.scheduleAtFixedRate(new TimerTask()
 		{
 			@Override
@@ -83,6 +85,16 @@ public class DebugRadioMonitor
 				checkRadios();
 			}
 		}, MONITOR_TIMER_PERIOD.toMillis(), MONITOR_TIMER_PERIOD.toMillis() );
+		
+		this.logTimer = new Timer( this.name+"-debug-counter" );
+		this.logTimer.scheduleAtFixedRate(new TimerTask()
+		{
+			@Override
+			public void run()
+			{
+				logCounts();
+			}
+		}, COUNT_LOG_TIMER_PERIOD.toMillis(), COUNT_LOG_TIMER_PERIOD.toMillis() );
 	}
 	
 	public synchronized void stop()
@@ -91,8 +103,13 @@ public class DebugRadioMonitor
 		{
 			this.monitorTimer.cancel();
 			this.monitorTimer = null;
-			this.radios.clear();
 		}
+		if( this.logTimer != null )
+		{
+			this.logTimer.cancel();
+			this.logTimer = null;
+		}
+		this.radios.clear();
 	}
 	
 	public synchronized void onPdu( PDU pdu )
@@ -159,6 +176,33 @@ public class DebugRadioMonitor
 			}
 		}
 	}
+	
+	private synchronized void logCounts()
+	{
+		for( MonitoredRadio radio : this.radios.values() )
+		{
+			if( radio.signalCount == 0 )
+			{
+				if( radio.wasZeroLastTime )
+					continue;
+				else
+					radio.wasZeroLastTime = true;
+			}
+			else
+			{
+				radio.wasZeroLastTime = false;
+			}
+				
+			logger.info( "Saw %d SignalPDUs from radio %d-%d-%d-%d in the last %s",
+						 radio.signalCount,
+			             radio.entityId.getSiteId(),
+			             radio.entityId.getAppId(),
+			             radio.entityId.getEntityId(),
+			             radio.id,
+			             COUNT_LOG_TIMER_PERIOD.toString() );
+			radio.signalCount = 0;
+		}
+	}
 
 	//==========================================================================================
 	//----------------------------- Accessor and Mutator Methods -------------------------------
@@ -180,6 +224,9 @@ public class DebugRadioMonitor
 		private long lastTransmitStateTime;
 		private long lastTransmissionStartTime;
 		private long lastSignalTime;
+		
+		private boolean wasZeroLastTime = true;
+		private long signalCount;
 		
 		public MonitoredRadio( int id, EntityId entityId )
 		{
@@ -207,6 +254,7 @@ public class DebugRadioMonitor
 			if( pdu.getRadioID() != this.id )
 				return;
 			
+			this.signalCount++;
 			this.lastSignalTime = System.currentTimeMillis();
 		}
 		
