@@ -114,8 +114,8 @@ public class RprHeartbeater implements Runnable
 	private void flush()
 	{
 		long staleTime = System.currentTimeMillis()-heartbeatPeriod;
-		logger.trace( "hla >> dis (Heartbeat) Check for objects to heartbeat (not updated since %1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS)",
-		              staleTime );
+//		logger.trace( "hla >> dis (Heartbeat) Check for objects to heartbeat (not updated since %1$tY-%1$tm-%1$td %1$tH:%1$tM:%1$tS)",
+//		              staleTime );
 		
 		// Get discovered objects not updated since the timeout time
 		Collection<ObjectInstance> oldies =
@@ -139,7 +139,7 @@ public class RprHeartbeater implements Runnable
 			++updateCount;
 		}
 		
-		logger.trace( "hla >> dis (Heartbeat) Generated %d heartbeat events", updateCount );
+//		logger.trace( "hla >> dis (Heartbeat) Generated %d heartbeat events", updateCount );
 	}
 
 	private AttributeHandleValueMap getEmptyAttributes() throws DiscoException

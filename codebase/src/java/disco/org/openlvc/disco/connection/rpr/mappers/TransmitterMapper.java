@@ -25,7 +25,6 @@ import org.openlvc.disco.bus.EventHandler;
 import org.openlvc.disco.connection.rpr.model.AttributeClass;
 import org.openlvc.disco.connection.rpr.model.ObjectClass;
 import org.openlvc.disco.connection.rpr.objects.RadioTransmitter;
-import org.openlvc.disco.connection.rpr.types.enumerated.MajorRFModulationTypeEnum16;
 import org.openlvc.disco.pdu.field.PduType;
 import org.openlvc.disco.pdu.radio.TransmitterPdu;
 import org.openlvc.disco.pdu.record.EntityId;
@@ -171,9 +170,9 @@ public class TransmitterMapper extends AbstractMapper
 		// Send an update for the object
 		super.sendAttributeUpdate( hlaObject, serializeToHla(hlaObject) );
 		
-		if( logger.isTraceEnabled() )
-			logger.trace( "dis >> hla (Transmitter) Updated attributes for transmitter: id=%s, handle=%s",
-			              pdu.getFullId(), hlaObject.getObjectHandle() );
+//		if( logger.isTraceEnabled() )
+//			logger.trace( "dis >> hla (Transmitter) Updated attributes for transmitter: id=%s, handle=%s",
+//			              pdu.getFullId(), hlaObject.getObjectHandle() );
 	}
 	
 	private AttributeHandleValueMap serializeToHla( RadioTransmitter hlaObject )
@@ -326,9 +325,9 @@ public class TransmitterMapper extends AbstractMapper
 
 			if( logger.isDebugEnabled() )
 			{
-    			logger.debug( "hla >> dis (Discover) Created [%s] for discovery of object handle [%s]",
-    			              event.theClass.getLocalName(),
-    			              event.theObject );
+//    			logger.debug( "hla >> dis (Discover) Created [%s] for discovery of object handle [%s]",
+//    			              event.theClass.getLocalName(),
+//    			              event.theObject );
 			}
 			
 			// Request an attribute update for the object so that we can get everything we need

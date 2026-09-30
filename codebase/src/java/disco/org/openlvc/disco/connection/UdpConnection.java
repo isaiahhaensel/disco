@@ -313,8 +313,8 @@ public class UdpConnection implements IConnection
 					if( exerciseId == 0 || buffer[1] == exerciseId )
 					{
 						// hand it off to the receiver
-						if( logger.isTraceEnabled() )
-							logger.trace( "(Packet) size="+packet.getLength()+", source="+packet.getSocketAddress() );
+//						if( logger.isTraceEnabled() )
+//							logger.trace( "(Packet) size="+packet.getLength()+", source="+packet.getSocketAddress() );
 
 						opscenter.getPduReceiver().receive( buffer );
 						metrics.pduReceived( packet.getLength() );

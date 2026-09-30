@@ -554,7 +554,7 @@ public class RprConnection implements IConnection
 	                                   ObjectClassHandle theClass,
 	                                   String objectName )
 	{
-		logger.debug( "[hla>>dis] (Discover) object=%s, class=%s", theObject, theClass );
+//		logger.debug( "[hla>>dis] (Discover) object=%s, class=%s", theObject, theClass );
 
 		// Find the metadata information we have for the class
 		ObjectClass objectClass = objectModel.getObjectClass( theClass );
@@ -571,7 +571,7 @@ public class RprConnection implements IConnection
 	protected void receiveHlaReflection( ObjectInstanceHandle objectHandle,
 	                                     AttributeHandleValueMap attributes )
 	{
-		logger.trace( "[hla>>dis] (Reflect) object=%s, attribute=%d", objectHandle, attributes.size() );
+//		logger.trace( "[hla>>dis] (Reflect) object=%s, attribute=%d", objectHandle, attributes.size() );
 
 		// Find the local object representation for this object handle
 		ObjectInstance hlaObject = objectStore.getDiscoveredHlaObject( objectHandle );
@@ -611,7 +611,7 @@ public class RprConnection implements IConnection
 	protected void receiveHlaInteraction( InteractionClassHandle classHandle,
 	                                      ParameterHandleValueMap parameters )
 	{
-		logger.trace( "[hla>>dis] (Interaction) class=%s, parameters=%d", classHandle, parameters.size() );
+//		logger.trace( "[hla>>dis] (Interaction) class=%s, parameters=%d", classHandle, parameters.size() );
 		
 		try
 		{
