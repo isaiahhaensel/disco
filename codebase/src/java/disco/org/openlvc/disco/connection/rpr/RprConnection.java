@@ -597,12 +597,12 @@ public class RprConnection implements IConnection
 	{
 		ObjectInstance hlaObject = objectStore.removeDiscoveredHlaObject( objectHandle );
 
-		if( logger.isDebugEnabled() )
-		{
-			logger.debug( "[hla>>dis] (Remove) Removed object: handle=%s, name=%s",
-			              objectHandle.toString(),
-			              hlaObject == null ? "null" : hlaObject.getObjectName() );
-		}
+//		if( logger.isDebugEnabled() )
+//		{
+//			logger.debug( "[hla>>dis] (Remove) Removed object: handle=%s, name=%s",
+//			              objectHandle.toString(),
+//			              hlaObject == null ? "null" : hlaObject.getObjectName() );
+//		}
 	}
 	
 	//

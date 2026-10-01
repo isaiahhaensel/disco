@@ -170,12 +170,12 @@ public class EmitterSystemMapper extends AbstractEmitterMapper
 			hlaObject.setObjectAttributes( super.createAttributes(this.hlaClass) );
 			objectStore.addDiscoveredHlaObject( hlaObject );
 			
-			if( logger.isDebugEnabled() )
-			{
-    			logger.debug( "hla >> dis (Discover) Created [%s] for discovery of object handle [%s]",
-    			              event.theClass.getLocalName(),
-    			              event.theObject );
-			}
+//			if( logger.isDebugEnabled() )
+//			{
+//    			logger.debug( "hla >> dis (Discover) Created [%s] for discovery of object handle [%s]",
+//    			              event.theClass.getLocalName(),
+//    			              event.theObject );
+//			}
 			
 			// Request an attribute update for the object so that we can get everything we need
 			super.requestAttributeUpdate( hlaObject );

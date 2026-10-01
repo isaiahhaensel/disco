@@ -285,8 +285,8 @@ public abstract class AbstractEmitterMapper extends AbstractMapper
     				// This shouldn't be fatal, as it might be targeting something we don't track yet,
     				// like a specific munition or attached part that is also represented as an object.
     				// Just don't pass the target through.
-    				logger.debug( "hla >> dis (Reflect) [EmitterBeam] Target unknown or not a platform, omitting: %s",
-    				              id.toString() );
+//    				logger.debug( "hla >> dis (Reflect) [EmitterBeam] Target unknown or not a platform, omitting: %s",
+//    				              id.toString() );
 				}
 			}
 			
