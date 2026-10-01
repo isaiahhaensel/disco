@@ -70,7 +70,7 @@ public class SimpleReceiver extends PduReceiver
 		{
 			// log and continue
 			this.unsupportedPDUMerger.getMergeCount().ifPresent(
-				(c) -> opscenter.getLogger().warn( "(x%s) (PduRecv) Received unsupported PDU, skipping it: %s", c, up.getMessage() )
+				(c) -> logger.warn( "(x%s) (PduRecv) Received unsupported PDU, skipping it: %s", c, up.getMessage() )
 			);
 		}
 		catch( DiscoException de )
@@ -78,8 +78,8 @@ public class SimpleReceiver extends PduReceiver
 			// log and continue
 			this.discoExceptionMerger.getMergeCount().ifPresent(
 				(c) -> {
-					opscenter.getLogger().warn( "(x%s) (PduRecv) Problem deserializing PDU, skipping it: %s", c, de.getMessage() );
-					opscenter.getLogger().catching( de );
+					logger.warn( "(x%s) (PduRecv) Problem deserializing PDU, skipping it: %s", c, de.getMessage() );
+					logger.catching( de );
 				}
 			);
 		}

@@ -339,8 +339,8 @@ public class RprConnection implements IConnection
 		catch( Throwable e )
 		{
 			sendMerger.getMergeCount().ifPresent( (c) -> {
-				opscenter.getLogger().warn("(x%s) (RprConnection) Exception sending DIS >> HLA: %s", c, e.getMessage());
-				opscenter.getLogger().catching(Level.WARN, e);
+				logger.warn("(x%s) (RprConnection) Exception sending DIS >> HLA: %s", c, e.getMessage());
+				logger.catching(Level.WARN, e);
 			} );
 			
 			metrics.pduDiscarded();
@@ -633,8 +633,8 @@ public class RprConnection implements IConnection
 		catch( Throwable e )
 		{
 			recvMerger.getMergeCount().ifPresent( (c) -> {
-				opscenter.getLogger().warn("(x%s) Error receiving interaction: %s", c, e.getMessage());
-				opscenter.getLogger().catching(Level.WARN, e);
+				logger.warn("(x%s) Error receiving interaction: %s", c, e.getMessage());
+				logger.catching(Level.WARN, e);
 			} );
 		}
 	}

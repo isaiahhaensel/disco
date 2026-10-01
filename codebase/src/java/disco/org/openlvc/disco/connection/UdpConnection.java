@@ -182,12 +182,14 @@ public class UdpConnection implements IConnection
 
 		logger.info( "UDP Provider open and processing" );
 
+		String name = this.getClass().getSimpleName();
 		if( this.isSender )
-		{
-			this.debugRadioMonitor = new DebugRadioMonitor( this.getClass().getSimpleName(),
-			                                                this.logger );
-			this.debugRadioMonitor.start();
-		}
+			name = name+"-sender";
+		else
+			name = name+"-receiver";
+		
+		this.debugRadioMonitor = new DebugRadioMonitor( name, this.logger );
+		this.debugRadioMonitor.start();
 	}
 	
 	@Override
